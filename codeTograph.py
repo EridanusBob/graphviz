@@ -1,4 +1,4 @@
-from hello import FuncStructObj, IfBlockCode
+from hello import FuncStructObj, IfBlockCode, OnelineCode, LinesCode
 from graphviz import Digraph
 import os
 
@@ -6,57 +6,44 @@ os.environ["PATH"] += os.pathsep + r"C:\Program Files (x86)\Graphviz2.38\bin"
 y_res, n_res = [], []
 
 
-def process_item(item, index):
+def linde_code_process(item, index):
+    item.node_name = str(index)
+    dot.node(item.node_name, item.__str__())
+
+
+def Ifblock_code_process(item, index):
     global y_res, n_res
     node_name = str(index)
-    if type(item) == IfBlockCode:
-        dot.node(node_name, item.condition, {'shape': "diamond"})
-        if item.if_true:
-            if type(item.if_true) == IfBlockCode:
-                process_item(item.if_true, index * 10)
-                dot.edge(node_name, str(index * 10), label="Y")
-            else:
-                node_name_true = str(index) + 'if_true'
-                dot.node(node_name_true, item.if_true.__str__())
-                dot.edge(node_name, node_name_true, label="Y")
-                y_res.append((node_name_true, True))
+    dot.node(node_name, item.condition, {'shape': "diamond"})
+    if item.if_true:
+        if type(item.if_true) == IfBlockCode:
+            Ifblock_code_process(item.if_true, index * 10)
+            dot.edge(node_name, str(index * 10), label="Y")
+        elif type(item.if_true) in (OnelineCode, LinesCode):
+            node_name_true = str(index) + 'if_true'
+            dot.node(node_name_true, item.if_true.__str__())
+            dot.edge(node_name, node_name_true, label="Y")
+            y_res.append((node_name_true, True))
         else:
-            y_res.append((str(index), False))
-        if item.if_false:
-            if type(item.if_false) == IfBlockCode:
-                process_item(item.if_false, index * 10)
-                dot.edge(node_name, str(index * 10), label="N")
-            else:
-                node_name_false = str(index) + 'if_false'
-                dot.node(node_name_false, item.if_false.__str__())
-                dot.edge(node_name, node_name_false, label="N")
-                n_res.append((node_name_false, True))
-        else:
-            n_res.append((str(index), False))
+            pass
     else:
-        dot.node(str(index), item.__str__())
+        y_res.append((node_name, False))
 
-
-def link_itmes(items, item, index):
-    node_name = str(index)
-    if items.index(item) > 0:
-        last_item_index = items.index(i) - 1
-        last_item = items[last_item_index]
-        if type(last_item) == IfBlockCode:
-            for member in last_item.y_res:
-                if member[1]:
-                    dot.edge(member[0], node_name)
-                else:
-                    dot.edge(member[0], node_name, label="Y")
-
-            for member in last_item.n_res:
-                if member[1]:
-                    dot.edge(member[0], node_name)
-                else:
-                    dot.edge(member[0], node_name, label="N")
+    if item.if_false:
+        if type(item.if_false) == IfBlockCode:
+            Ifblock_code_process(item.if_false, index * 10)
+            # dot.edge(node_name, str(item.node_name * 10), label="N")
+            dot.edge(node_name, str(index * 10), label="N")
+            print(node_name, str(index * 10), "!!!!!!!!")
+        elif type(item.if_false) in (OnelineCode, LinesCode):
+            node_name_false = str(index) + 'if_false'
+            dot.node(node_name_false, item.if_false.__str__())
+            dot.edge(node_name, node_name_false, label="N")
+            n_res.append((node_name_false, True))
         else:
-            last_node_name = str(last_item_index)
-            dot.edge(last_node_name, node_name)
+            pass
+    else:
+        n_res.append((node_name, False))
 
 
 dot = Digraph(comment=FuncStructObj.name, engine='dot')
@@ -78,13 +65,48 @@ dot.node_attr = {'fontname': "serif",
 items = FuncStructObj.items
 for i in items:
     index = items.index(i)
+    if type(i) == IfBlockCode:
+        Ifblock_code_process(i, index)
+        i.y_res, i.n_res = y_res.copy(), n_res.copy()
+        y_res, n_res = [], []
+    elif type(i) in (OnelineCode, LinesCode):
+        linde_code_process(i, index)
+    else:
+        pass
 
-    process_item(i, index)
-    i.y_res, i.n_res = y_res.copy(), n_res.copy()
-    y_res, n_res = [], []
+nodes = []
+# 获取首尾nodes
+for i in items:
+    node_name = str(items.index(i))
+    if type(i) == IfBlockCode:
+        nodes.append((node_name, (i.y_res, i.n_res)))
+    elif type(i) in (OnelineCode, LinesCode):
+        nodes.append((node_name, node_name))
+    else:
+        pass
 
-    link_itmes(items, i, index)
+# 将items串起来
+for i in nodes:
+    index = nodes.index(i)
+    if index > 0:
+        last_item_tail = nodes[index - 1][1]
+        this_item_head = nodes[index][0]
+        print(type(last_item_tail), last_item_tail, type(this_item_head), this_item_head)
 
+        if type(last_item_tail) == tuple:
+            for member in last_item_tail[0]:
+                if member[1]:
+                    dot.edge(member[0], this_item_head)
+                else:
+                    dot.edge(member[0], this_item_head, label="Y")
+
+            for member in last_item_tail[1]:
+                if member[1]:
+                    dot.edge(member[0], this_item_head)
+                else:
+                    dot.edge(member[0], this_item_head, label="N")
+        elif type(last_item_tail) == str:
+            dot.edge(last_item_tail, this_item_head)
 
 # Check the generated source code:
 print(dot.source)
