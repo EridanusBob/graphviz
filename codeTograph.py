@@ -7,20 +7,20 @@ y_res, n_res = [], []
 
 
 def linde_code_process(item, index):
-    item.node_name = str(index)
-    dot.node(item.node_name, item.__str__())
+    node_name = index
+    dot.node(node_name, item.__str__())
 
 
 def Ifblock_code_process(item, index):
     global y_res, n_res
-    node_name = str(index)
+    node_name = index
     dot.node(node_name, item.condition, {'shape': "diamond"})
     if item.if_true:
         if type(item.if_true) == IfBlockCode:
-            Ifblock_code_process(item.if_true, index * 10)
-            dot.edge(node_name, str(index * 10), label="Y")
+            Ifblock_code_process(item.if_true, node_name + 'if_sub')
+            dot.edge(node_name, node_name + 'if_sub', label="Y")
         elif type(item.if_true) in (OnelineCode, LinesCode):
-            node_name_true = str(index) + 'if_true'
+            node_name_true = node_name + 'if_true'
             dot.node(node_name_true, item.if_true.__str__())
             dot.edge(node_name, node_name_true, label="Y")
             y_res.append((node_name_true, True))
@@ -31,12 +31,10 @@ def Ifblock_code_process(item, index):
 
     if item.if_false:
         if type(item.if_false) == IfBlockCode:
-            Ifblock_code_process(item.if_false, index * 10)
-            # dot.edge(node_name, str(item.node_name * 10), label="N")
-            dot.edge(node_name, str(index * 10), label="N")
-            print(node_name, str(index * 10), "!!!!!!!!")
+            Ifblock_code_process(item.if_false, node_name + 'if_sub')
+            dot.edge(node_name, node_name + 'if_sub', label="N")
         elif type(item.if_false) in (OnelineCode, LinesCode):
-            node_name_false = str(index) + 'if_false'
+            node_name_false = node_name + 'if_false'
             dot.node(node_name_false, item.if_false.__str__())
             dot.edge(node_name, node_name_false, label="N")
             n_res.append((node_name_false, True))
@@ -63,8 +61,10 @@ dot.node_attr = {'fontname': "serif",
                  'fontcolor': "4"}
 # Add nodes and edges:
 items = FuncStructObj.items
+
+# 处理每个item
 for i in items:
-    index = items.index(i)
+    index = str(items.index(i))
     if type(i) == IfBlockCode:
         Ifblock_code_process(i, index)
         i.y_res, i.n_res = y_res.copy(), n_res.copy()
@@ -75,7 +75,7 @@ for i in items:
         pass
 
 nodes = []
-# 获取首尾nodes
+# 获取每个item首尾nodes
 for i in items:
     node_name = str(items.index(i))
     if type(i) == IfBlockCode:
@@ -85,7 +85,7 @@ for i in items:
     else:
         pass
 
-# 将items串起来
+# 将每个item首尾nodes串起来
 for i in nodes:
     index = nodes.index(i)
     if index > 0:
