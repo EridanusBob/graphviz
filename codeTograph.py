@@ -62,7 +62,7 @@ dot.node_attr = {'fontname': "serif",
 # Add nodes and edges:
 items = FuncStructObj.items
 
-# 处理每个item
+# 处理每个item,并获取每个item首尾nodes
 for i in items:
     index = str(items.index(i))
     if type(i) == IfBlockCode:
@@ -74,39 +74,30 @@ for i in items:
     else:
         pass
 
-nodes = []
-# 获取每个item首尾nodes
-for i in items:
-    node_name = str(items.index(i))
-    if type(i) == IfBlockCode:
-        nodes.append((node_name, (i.y_res, i.n_res)))
-    elif type(i) in (OnelineCode, LinesCode):
-        nodes.append((node_name, node_name))
-    else:
-        pass
-
 # 将每个item首尾nodes串起来
-for i in nodes:
-    index = nodes.index(i)
+for i in items:
+    index = items.index(i)
     if index > 0:
-        last_item_tail = nodes[index - 1][1]
-        this_item_head = nodes[index][0]
-        print(type(last_item_tail), last_item_tail, type(this_item_head), this_item_head)
-
-        if type(last_item_tail) == tuple:
-            for member in last_item_tail[0]:
+        last_item = items[index - 1]
+        this_item_head = str(index)
+        if type(last_item) == IfBlockCode:
+            for member in last_item.y_res:
                 if member[1]:
                     dot.edge(member[0], this_item_head)
                 else:
                     dot.edge(member[0], this_item_head, label="Y")
 
-            for member in last_item_tail[1]:
+            for member in last_item.n_res:
                 if member[1]:
                     dot.edge(member[0], this_item_head)
                 else:
                     dot.edge(member[0], this_item_head, label="N")
-        elif type(last_item_tail) == str:
-            dot.edge(last_item_tail, this_item_head)
+        elif type(last_item) in (OnelineCode, LinesCode):
+            dot.edge(str(index - 1), this_item_head)
+        else:
+            pass
+
+
 
 # Check the generated source code:
 print(dot.source)
