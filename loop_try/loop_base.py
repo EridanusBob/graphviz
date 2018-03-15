@@ -59,12 +59,24 @@ condition = "pres_subslot_num > max_subslots"
 ifblock = IfBlockCode(condition)
 ifblock.if_true = OnelineCode('break')
 
+init_block1 = LinesCode()
+init_block1.add_line(OnelineCode('setnumber pres_subslot_num 0'))
+init_block1.add_line(OnelineCode('calc pres_slot_num += 1'))
+condition = "pres_subslot_num > max_subslots"
+ifblock1 = IfBlockCode(condition)
+ifblock1.if_true = OnelineCode('break')
+temp = LoopCode()
+temp.init_block = init_block1
+temp.ifblock = ifblock1
+temp.other_block = OnelineCode('test...')
+
 item3 = LoopCode()
 item3.init_block = init_block
 item3.ifblock = ifblock
-item3.other_block = OnelineCode('test...')
-
-FuncStructObj.items = [item1, item2, item3]
+# item3.other_block = temp
+# item3.other_block = OnelineCode('111')
+item4 = OnelineCode('EXIT')
+FuncStructObj.items = [item1, item2, item3, item4]
 
 if __name__ == "__main__":
     print(FuncStructObj.name, '\n')

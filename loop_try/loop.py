@@ -80,22 +80,30 @@ def loop_code_process(item, index):
     y_res, n_res = [], []
     item.break_node_name = ifblock.y_res[0][0]
     # other_block----------------------------------
-    if type(other_block) == OnelineCode:
-        other_block.node_name = 'loop_other_block' + node_name + 'OnelineCode'
-        item.continue_node_name = other_block.node_name
+    if type(other_block) in (OnelineCode, LinesCode):
+        other_block.node_name = 'loop_other_block' + node_name + 'lineCode'
         dot.node(other_block.node_name, other_block.__str__())
+        other_block.node_tail = other_block.node_name
+    elif type(other_block) == LoopCode:
+        other_block.node_name = 'loop_other_block' + node_name + 'LoopCode'
+        loop_code_process(other_block, other_block.node_name)
         other_block.node_tail = other_block.node_name
     else:
         pass
 
-    for member in ifblock.n_res:
-        if member[1]:
-            dot.edge(member[0], other_block.node_name)
-        else:
-            dot.edge(member[0], other_block.node_name, label="N")
-
-    dot.edge(other_block.node_tail, 'continue')
-    dot.edge('continue', node_name)
+    if other_block is not None:
+        for member in ifblock.n_res:
+            if member[1]:
+                dot.edge(member[0], other_block.node_name)
+            else:
+                dot.edge(member[0], other_block.node_name, label="N")
+        dot.node(node_name + 'continue', 'continue')
+        dot.edge(other_block.node_tail, node_name + 'continue')
+        dot.edge(node_name + 'continue', node_name)
+    else:
+        dot.node(node_name + 'continue', 'continue')
+        dot.edge(ifblock.n_res[0][0], node_name + 'continue', label="N")
+        dot.edge(node_name + 'continue', node_name)
 
 
 # 初始化
@@ -151,8 +159,8 @@ for i in items:
                     dot.edge(member[0], this_item_head, label="N")
         elif type(last_item) in (OnelineCode, LinesCode):
             dot.edge(str(index - 1), this_item_head)
-        elif type(i) == LoopCode:
-            dot.edge(i.break_node_name, this_item_head)
+        elif type(last_item) == LoopCode:
+            dot.edge(last_item.break_node_name, this_item_head)
         else:
             pass
 
