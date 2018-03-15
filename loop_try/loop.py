@@ -1,4 +1,4 @@
-from hello import FuncStructObj, IfBlockCode, OnelineCode, LinesCode
+from loop_try.loop_base import FuncStructObj, IfBlockCode, OnelineCode, LinesCode, LoopCode
 from graphviz import Digraph
 import os
 
@@ -44,6 +44,61 @@ def Ifblock_code_process(item, index):
         n_res.append((node_name, False))
 
 
+def loop_code_process(item, index):
+    global y_res, n_res
+    node_name = index
+    # init_block----------------------------------
+    init_block = item.init_block
+    ifblock = item.ifblock
+    other_block = item.other_block
+    if init_block is None:
+        ifblock.node_name = node_name
+        dot.node(node_name, item.ifblock.condition, {'shape': "diamond"})
+    elif type(init_block) == LinesCode:
+        ifblock.node_name = 'loop_if_block' + node_name
+        dot.node(node_name, init_block.items[0].__str__())
+        for i in init_block.items:
+            local_index = init_block.items.index(i)
+            if local_index > 0:
+                if local_index == 1:
+                    last_node_name = node_name
+                else:
+                    last_node_name = "loop_init_line" + str(local_index - 1)
+                this_node_name = "loop_init_line" + str(local_index)
+                dot.node(this_node_name, i.__str__())
+                dot.edge(last_node_name, this_node_name)
+        dot.node(ifblock.node_name, item.ifblock.condition, {'shape': "diamond"})
+        dot.edge("loop_init_line" + str(len(init_block.items) - 1), ifblock.node_name)
+    elif type(init_block) == OnelineCode:
+        ifblock.node_name = 'loop_if_block' + node_name
+        dot.node(ifblock.node_name, item.ifblock.condition, {'shape': "diamond"})
+        dot.node(node_name, init_block.__str__())
+        dot.edge(node_name, ifblock.node_name)
+    # ifblock----------------------------------
+    Ifblock_code_process(ifblock, ifblock.node_name)
+    ifblock.y_res, ifblock.n_res = y_res.copy(), n_res.copy()
+    y_res, n_res = [], []
+    item.break_node_name = ifblock.y_res[0][0]
+    # other_block----------------------------------
+    if type(other_block) == OnelineCode:
+        other_block.node_name = 'loop_other_block' + node_name + 'OnelineCode'
+        item.continue_node_name = other_block.node_name
+        dot.node(other_block.node_name, other_block.__str__())
+        other_block.node_tail = other_block.node_name
+    else:
+        pass
+
+    for member in ifblock.n_res:
+        if member[1]:
+            dot.edge(member[0], other_block.node_name)
+        else:
+            dot.edge(member[0], other_block.node_name, label="N")
+
+    dot.edge(other_block.node_tail, 'continue')
+    dot.edge('continue', node_name)
+
+
+# 初始化
 dot = Digraph(comment=FuncStructObj.name, engine='dot')
 dot.edge_attr = {'comment': "Wildcard edge",
                  'fontname': "sans-serif",
@@ -71,6 +126,8 @@ for i in items:
         y_res, n_res = [], []
     elif type(i) in (OnelineCode, LinesCode):
         linde_code_process(i, index)
+    elif type(i) == LoopCode:
+        loop_code_process(i, index)
     else:
         pass
 
@@ -94,6 +151,8 @@ for i in items:
                     dot.edge(member[0], this_item_head, label="N")
         elif type(last_item) in (OnelineCode, LinesCode):
             dot.edge(str(index - 1), this_item_head)
+        elif type(i) == LoopCode:
+            dot.edge(i.break_node_name, this_item_head)
         else:
             pass
 
@@ -101,7 +160,6 @@ for i in items:
 print(dot.source)
 
 # Save and render the source code, optionally view the result:
-# dot.render(FuncStructObj.name + '.gv', view=True)  # doctest: +SKIP
 if os.path.exists(FuncStructObj.name + '.gv'):
     os.remove(FuncStructObj.name + '.gv')
     os.remove(FuncStructObj.name + '.gv' + '.pdf')
