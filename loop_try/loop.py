@@ -5,6 +5,19 @@ import os
 os.environ["PATH"] += os.pathsep + r"C:\Program Files (x86)\Graphviz2.38\bin"
 y_res, n_res = [], []
 
+def ifblock_tail_process(y_res, n_res, node_name):
+    for member in y_res:
+        if member[1]:
+            dot.edge(member[0], node_name)
+        else:
+            dot.edge(member[0], node_name, label="Y")
+
+    for member in n_res:
+        if member[1]:
+            dot.edge(member[0], node_name)
+        else:
+            dot.edge(member[0], node_name, label="N")
+
 
 def code_block_process(obj):
     global y_res, n_res
@@ -31,17 +44,7 @@ def code_block_process(obj):
             last_item = items[index - 1]
             this_item_head = str(index) + obj.name
             if type(last_item) == IfBlockCode:
-                for member in last_item.y_res:
-                    if member[1]:
-                        dot.edge(member[0], this_item_head)
-                    else:
-                        dot.edge(member[0], this_item_head, label="Y")
-
-                for member in last_item.n_res:
-                    if member[1]:
-                        dot.edge(member[0], this_item_head)
-                    else:
-                        dot.edge(member[0], this_item_head, label="N")
+                ifblock_tail_process(last_item.y_res, last_item.n_res, this_item_head)
             elif type(last_item) in (OnelineCode, LinesCode):
                 dot.edge(str(index - 1) + obj.name, this_item_head)
             elif type(last_item) == LoopCode:
@@ -138,7 +141,10 @@ def loop_code_process(item, index):
         else:
             dot.edge(member[0], item.other_block_head, label="N")
         # other_block的尾,指向continue_block
-        dot.edge(item.other_block_tail, item.continue_node_name)
+        if type(item.other_block_tail) == tuple:
+            ifblock_tail_process(item.other_block_tail[0], item.other_block_tail[1], item.continue_node_name)
+        else:
+            dot.edge(item.other_block_tail, item.continue_node_name)
     else:
         # ifblock的N,指向continue_block
         dot.edge(ifblock.n_res[0][0], item.continue_node_name, label="N")
