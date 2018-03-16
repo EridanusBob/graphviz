@@ -46,34 +46,19 @@ def Ifblock_code_process(item, index):
 
 def loop_code_process(item, index):
     global y_res, n_res
-    node_name = index
+    item.node_name = index
     # init_block----------------------------------
     init_block = item.init_block
     ifblock = item.ifblock
     other_block = item.other_block
     if init_block is None:
-        ifblock.node_name = node_name
-        dot.node(node_name, item.ifblock.condition, {'shape': "diamond"})
-    elif type(init_block) == LinesCode:
-        ifblock.node_name = 'loop_if_block' + node_name
-        dot.node(node_name, init_block.items[0].__str__())
-        for i in init_block.items:
-            local_index = init_block.items.index(i)
-            if local_index > 0:
-                if local_index == 1:
-                    last_node_name = node_name
-                else:
-                    last_node_name = "loop_init_line" + str(local_index - 1)
-                this_node_name = "loop_init_line" + str(local_index)
-                dot.node(this_node_name, i.__str__())
-                dot.edge(last_node_name, this_node_name)
+        ifblock.node_name = item.node_name
+        dot.node(item.node_name, item.ifblock.condition, {'shape': "diamond"})
+    elif type(init_block) in (OnelineCode, LinesCode):
+        ifblock.node_name = 'loop_if_block' + item.node_name
         dot.node(ifblock.node_name, item.ifblock.condition, {'shape': "diamond"})
-        dot.edge("loop_init_line" + str(len(init_block.items) - 1), ifblock.node_name)
-    elif type(init_block) == OnelineCode:
-        ifblock.node_name = 'loop_if_block' + node_name
-        dot.node(ifblock.node_name, item.ifblock.condition, {'shape': "diamond"})
-        dot.node(node_name, init_block.__str__())
-        dot.edge(node_name, ifblock.node_name)
+        dot.node(item.node_name, init_block.__str__())
+        dot.edge(item.node_name, ifblock.node_name)
     # ifblock----------------------------------
     Ifblock_code_process(ifblock, ifblock.node_name)
     ifblock.y_res, ifblock.n_res = y_res.copy(), n_res.copy()
@@ -81,29 +66,35 @@ def loop_code_process(item, index):
     item.break_node_name = ifblock.y_res[0][0]
     # other_block----------------------------------
     if type(other_block) in (OnelineCode, LinesCode):
-        other_block.node_name = 'loop_other_block' + node_name + 'lineCode'
+        other_block.node_name = 'loop_other_block' + item.node_name + 'lineCode'
         dot.node(other_block.node_name, other_block.__str__())
         other_block.node_tail = other_block.node_name
     elif type(other_block) == LoopCode:
-        other_block.node_name = 'loop_other_block' + node_name + 'LoopCode'
+        node_name = 'loop_other_block' + item.node_name + 'LoopCode'
+        other_block.node_name = node_name
         loop_code_process(other_block, other_block.node_name)
-        other_block.node_tail = other_block.node_name
+        other_block.node_tail = other_block.break_node_name
+        print(other_block.node_tail, "%%%%")
     else:
         pass
 
+    # continue_block----------------------------------------
+    item.continue_node_name = item.node_name + 'continue'
+    dot.node(item.continue_node_name, 'continue')
     if other_block is not None:
-        for member in ifblock.n_res:
-            if member[1]:
-                dot.edge(member[0], other_block.node_name)
-            else:
-                dot.edge(member[0], other_block.node_name, label="N")
-        dot.node(node_name + 'continue', 'continue')
-        dot.edge(other_block.node_tail, node_name + 'continue')
-        dot.edge(node_name + 'continue', node_name)
+        # ifblock的N,指向other_block的头
+        member = ifblock.n_res[0]
+        if member[1]:
+            dot.edge(member[0], other_block.node_name)
+        else:
+            dot.edge(member[0], other_block.node_name, label="N")
+        # other_block的尾,指向continue_block
+        dot.edge(other_block.node_tail, item.continue_node_name)
     else:
-        dot.node(node_name + 'continue', 'continue')
-        dot.edge(ifblock.n_res[0][0], node_name + 'continue', label="N")
-        dot.edge(node_name + 'continue', node_name)
+        # ifblock的N,指向continue_block
+        dot.edge(ifblock.n_res[0][0], item.continue_node_name, label="N")
+    # continue_block执行LoopCode头
+    dot.edge(item.continue_node_name, item.node_name)
 
 
 # 初始化
