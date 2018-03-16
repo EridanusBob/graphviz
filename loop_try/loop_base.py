@@ -2,6 +2,8 @@ class FuncBlock:
     def __init__(self, name=None):
         self.name = name
         self.items = []
+        self.head_node_name = None
+        self.tail_node_name = None
 
     def add_item(self, item):
         self.items.append(item)
@@ -43,6 +45,8 @@ class LoopCode:
         self.init_block = None
         self.ifblock = None
         self.other_block = None
+        self.other_block_head = None
+        self.other_block_tail = None
         self.break_node_name = None
         self.continue_node_name = None
 
@@ -69,12 +73,16 @@ ifblock1.if_true = OnelineCode('break')
 temp = LoopCode()
 temp.init_block = init_block1
 temp.ifblock = ifblock1
-temp.other_block = OnelineCode('haha.')
+other_block = FuncBlock("haha")
+a = OnelineCode('hahaha')
+other_block.items = [temp, a]
+
 
 item3 = LoopCode()
 item3.init_block = init_block
 item3.ifblock = ifblock
-item3.other_block = temp
+item3.other_block = other_block
+# item3.other_block = temp
 # item3.other_block = OnelineCode('111')
 item4 = OnelineCode('EXIT')
 FuncStructObj.items = [item1, item2, item3, item4]

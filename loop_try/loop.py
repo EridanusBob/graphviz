@@ -6,6 +6,50 @@ os.environ["PATH"] += os.pathsep + r"C:\Program Files (x86)\Graphviz2.38\bin"
 y_res, n_res = [], []
 
 
+def code_block_process(obj):
+    global y_res, n_res
+    items = obj.items
+    # 处理每个item,并获取每个item首尾nodes
+    for i in items:
+        index = str(items.index(i))
+        node_name = index + obj.name
+        if type(i) == IfBlockCode:
+            Ifblock_code_process(i, node_name)
+            i.y_res, i.n_res = y_res.copy(), n_res.copy()
+            y_res, n_res = [], []
+        elif type(i) in (OnelineCode, LinesCode):
+            linde_code_process(i, node_name)
+        elif type(i) == LoopCode:
+            loop_code_process(i, node_name)
+        else:
+            pass
+
+    # 将每个item首尾nodes串起来
+    for i in items:
+        index = items.index(i)
+        if index > 0:
+            last_item = items[index - 1]
+            this_item_head = str(index) + obj.name
+            if type(last_item) == IfBlockCode:
+                for member in last_item.y_res:
+                    if member[1]:
+                        dot.edge(member[0], this_item_head)
+                    else:
+                        dot.edge(member[0], this_item_head, label="Y")
+
+                for member in last_item.n_res:
+                    if member[1]:
+                        dot.edge(member[0], this_item_head)
+                    else:
+                        dot.edge(member[0], this_item_head, label="N")
+            elif type(last_item) in (OnelineCode, LinesCode):
+                dot.edge(str(index - 1) + obj.name, this_item_head)
+            elif type(last_item) == LoopCode:
+                dot.edge(last_item.break_node_name, this_item_head)
+            else:
+                pass
+
+
 def linde_code_process(item, index):
     node_name = index
     dot.node(node_name, item.__str__())
@@ -51,6 +95,7 @@ def loop_code_process(item, index):
     init_block = item.init_block
     ifblock = item.ifblock
     other_block = item.other_block
+    print(type(item.other_block), item.other_block)
     if init_block is None:
         ifblock.node_name = item.node_name
         dot.node(item.node_name, item.ifblock.condition, {'shape': "diamond"})
@@ -64,19 +109,23 @@ def loop_code_process(item, index):
     ifblock.y_res, ifblock.n_res = y_res.copy(), n_res.copy()
     y_res, n_res = [], []
     item.break_node_name = ifblock.y_res[0][0]
-    # other_block----------------------------------
-    if type(other_block) in (OnelineCode, LinesCode):
-        other_block.node_name = 'loop_other_block' + item.node_name + 'lineCode'
-        dot.node(other_block.node_name, other_block.__str__())
-        other_block.node_tail = other_block.node_name
-    elif type(other_block) == LoopCode:
-        node_name = 'loop_other_block' + item.node_name + 'LoopCode'
-        other_block.node_name = node_name
-        loop_code_process(other_block, other_block.node_name)
-        other_block.node_tail = other_block.break_node_name
-        print(other_block.node_tail, "%%%%")
+
+    if other_block is not None:
+        code_block_process(other_block)
+        other_block.head_node_name = str(0) + other_block.name
+        if type(other_block.items[-1]) in (LinesCode, OnelineCode):
+            other_block.tail_node_name = str(len(other_block.items) - 1) + other_block.name
+        elif type(other_block.items[-1]) == IfBlockCode:
+            other_block.tail_node_name = other_block.items[-1].y_res, other_block.items[-1].n_res
+        elif type(other_block.items[-1]) == LoopCode:
+            other_block.tail_node_name = other_block.items[-1].break_node_name
+        else:
+            pass
+        item.other_block_head = other_block.head_node_name
+        item.other_block_tail = other_block.tail_node_name
     else:
-        pass
+        item.other_block_head = ifblock.node_name
+        item.other_block_tail = ifblock.node_name
 
     # continue_block----------------------------------------
     item.continue_node_name = item.node_name + 'continue'
@@ -85,11 +134,11 @@ def loop_code_process(item, index):
         # ifblock的N,指向other_block的头
         member = ifblock.n_res[0]
         if member[1]:
-            dot.edge(member[0], other_block.node_name)
+            dot.edge(member[0], item.other_block_head)
         else:
-            dot.edge(member[0], other_block.node_name, label="N")
+            dot.edge(member[0], item.other_block_head, label="N")
         # other_block的尾,指向continue_block
-        dot.edge(other_block.node_tail, item.continue_node_name)
+        dot.edge(item.other_block_tail, item.continue_node_name)
     else:
         # ifblock的N,指向continue_block
         dot.edge(ifblock.n_res[0][0], item.continue_node_name, label="N")
@@ -113,51 +162,9 @@ dot.node_attr = {'fontname': "serif",
                  'fontsize': '13',
                  'fillcolor': "1",
                  'fontcolor': "4"}
-# Add nodes and edges:
-items = FuncStructObj.items
-
-# 处理每个item,并获取每个item首尾nodes
-for i in items:
-    index = str(items.index(i))
-    if type(i) == IfBlockCode:
-        Ifblock_code_process(i, index)
-        i.y_res, i.n_res = y_res.copy(), n_res.copy()
-        y_res, n_res = [], []
-    elif type(i) in (OnelineCode, LinesCode):
-        linde_code_process(i, index)
-    elif type(i) == LoopCode:
-        loop_code_process(i, index)
-    else:
-        pass
-
-# 将每个item首尾nodes串起来
-for i in items:
-    index = items.index(i)
-    if index > 0:
-        last_item = items[index - 1]
-        this_item_head = str(index)
-        if type(last_item) == IfBlockCode:
-            for member in last_item.y_res:
-                if member[1]:
-                    dot.edge(member[0], this_item_head)
-                else:
-                    dot.edge(member[0], this_item_head, label="Y")
-
-            for member in last_item.n_res:
-                if member[1]:
-                    dot.edge(member[0], this_item_head)
-                else:
-                    dot.edge(member[0], this_item_head, label="N")
-        elif type(last_item) in (OnelineCode, LinesCode):
-            dot.edge(str(index - 1), this_item_head)
-        elif type(last_item) == LoopCode:
-            dot.edge(last_item.break_node_name, this_item_head)
-        else:
-            pass
-
+code_block_process(FuncStructObj)
 # Check the generated source code:
 print(dot.source)
-
 # Save and render the source code, optionally view the result:
 if os.path.exists(FuncStructObj.name + '.gv'):
     os.remove(FuncStructObj.name + '.gv')
