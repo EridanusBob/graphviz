@@ -37,6 +37,7 @@ class IfBlockCode:
         self.condition = condition
         self.if_true = None
         self.if_false = None
+        self.node_name_true = None
 
 
 class LoopCode:
@@ -78,30 +79,30 @@ ddd22.add_line(OnelineCode('calc pres_subslot_num += 1'))
 ddd22.add_line(OnelineCode('continue'))
 ddd2.if_true = ddd22
 
-ddd3 = LoopCode()
-ddd3.ifblock = IfBlockCode("!(dbg & dbg_DoSpromChecking)")
-ddd3.ifblock.if_true = LinesCode()
-ddd3.ifblock.if_true.add_line(OnelineCode(r'type "Skipping SPROM Capture\\n"'))
-ddd3.ifblock.if_true.add_line(OnelineCode(r'break'))
-
-eee = FuncBlock(FuncStructObj.name + "_loop1" + "_sub1" + "_sub1")
-eee1 = OnelineCode(r' call Insieme_SpromCaptureSingleLine')
-eee2 = IfBlockCode("(status & status_running)")
-eee2.if_true = OnelineCode("call Insieme_SpromCheckToScanned")
-eee3 = IfBlockCode("(status & status_running)")
-eee3.if_true = OnelineCode("call Insieme_SpromCheckToCMPD")
-eee.items = [ddd1, ddd2, ddd3]
-ddd3.other_block = eee
-# ddd3 = IfBlockCode("!(dbg & dbg_DoSpromChecking)")
-# ddd3.if_true = OnelineCode(r'type "Skipping SPROM Capture\\n"')
-# ddd3_else = FuncBlock(FuncStructObj.name + "_loop1" + "_sub1" + "_elseCode")
-# ddd3_else_1 = OnelineCode(r'call Insieme_SpromCaptureSingleLine')
-# ddd3_else_2 = IfBlockCode("(status & status_running)")
-# ddd3_else_2.if_true = OnelineCode(r'call Insieme_SpromCheckToScanned')
-# ddd3_else_3 = IfBlockCode("(status & status_running)")
-# ddd3_else_3.if_true = OnelineCode(r'call Insieme_SpromCheckToCMPD')
-# ddd3_else.items = [ddd3_else_1, ddd3_else_2, ddd3_else_3]
-# ddd3.if_false = ddd3_else
+# ddd3 = LoopCode()
+# ddd3.ifblock = IfBlockCode("!(dbg & dbg_DoSpromChecking)")
+# ddd3.ifblock.if_true = LinesCode()
+# ddd3.ifblock.if_true.add_line(OnelineCode(r'type "Skipping SPROM Capture\\n"'))
+# ddd3.ifblock.if_true.add_line(OnelineCode(r'break'))
+#
+# eee = FuncBlock(FuncStructObj.name + "_loop1" + "_sub1" + "_sub1")
+# eee1 = OnelineCode(r' call Insieme_SpromCaptureSingleLine')
+# eee2 = IfBlockCode("(status & status_running)")
+# eee2.if_true = OnelineCode("call Insieme_SpromCheckToScanned")
+# eee3 = IfBlockCode("(status & status_running)")
+# eee3.if_true = OnelineCode("call Insieme_SpromCheckToCMPD")
+# eee.items = [ddd1, ddd2, ddd3]
+# ddd3.other_block = eee
+ddd3 = IfBlockCode("!(dbg & dbg_DoSpromChecking)")
+ddd3.if_true = OnelineCode(r'type "Skipping SPROM Capture\\n"')
+ddd3_else = FuncBlock(FuncStructObj.name + "_loop1" + "_sub1" + "_elseCode")
+ddd3_else_1 = OnelineCode(r'call Insieme_SpromCaptureSingleLine')
+ddd3_else_2 = IfBlockCode("(status & status_running)")
+ddd3_else_2.if_true = OnelineCode(r'call Insieme_SpromCheckToScanned')
+ddd3_else_3 = IfBlockCode("(status & status_running)")
+ddd3_else_3.if_true = OnelineCode(r'call Insieme_SpromCheckToCMPD')
+ddd3_else.items = [ddd3_else_1, ddd3_else_2, ddd3_else_3]
+ddd3.if_false = ddd3_else
 ddd4 = OnelineCode(r'calc pres_subslot_num += 1')
 ddd.items = [ddd1, ddd2, ddd3, ddd4, OnelineCode(r'continue')]
 

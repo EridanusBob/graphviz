@@ -1,4 +1,4 @@
-from loop_try.loop_base22 import FuncStructObj, IfBlockCode, OnelineCode, LinesCode, LoopCode, FuncBlock
+from loop_try.loop_base import FuncStructObj, IfBlockCode, OnelineCode, LinesCode, LoopCode, FuncBlock
 from graphviz import Digraph
 import os
 
@@ -79,7 +79,10 @@ def Ifblock_code_process(item, index, **options):
                 node_name_true = node_name + 'if_true'
                 dot.node(node_name_true, item.if_true.__str__())
                 dot.edge(node_name, node_name_true, label="Y")
-                y_res.append((node_name_true, True))
+                if type(item.if_false) != FuncBlock:
+                    y_res.append((node_name_true, True))
+                else:
+                    item.node_name_true = node_name_true
         elif type(item.if_true) == LinesCode:
             last_member = item.if_true.items[-1]
             if last_member.__str__() == "break":
@@ -98,7 +101,10 @@ def Ifblock_code_process(item, index, **options):
                 node_name_true = node_name + 'if_true'
                 dot.node(node_name_true, item.if_true.__str__())
                 dot.edge(node_name, node_name_true, label="Y")
-                y_res.append((node_name_true, True))
+                if type(item.if_false) != FuncBlock:
+                    y_res.append((node_name_true, True))
+                else:
+                    item.node_name_true = node_name_true
         else:
             pass
     else:
@@ -125,7 +131,9 @@ def Ifblock_code_process(item, index, **options):
                 n_res.append((item.if_false.items[-1].break_node_name, True))
             else:
                 pass
-
+            if item.node_name_true is not None:
+                n_res.append((item.node_name_true, True))
+                item.node_name_true = None
         else:
             pass
     else:
